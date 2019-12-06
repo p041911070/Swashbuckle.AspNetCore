@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace Basic.Controllers
 {
     public class FromFormParamsController
     {
         [HttpPost("registrations")]
-        [Consumes("multipart/form-data")]
+        [Consumes("application/x-www-form-urlencoded")]
         public IActionResult PostForm([FromForm]RegistrationForm form)
         {
             throw new System.NotImplementedException();
@@ -15,10 +16,8 @@ namespace Basic.Controllers
 
     public class RegistrationForm
     {
-        //[FromForm]
         public string Name { get; set; }
 
-        //[FromForm]
         public IEnumerable<int> PhoneNumbers { get; set; }
     }
 }

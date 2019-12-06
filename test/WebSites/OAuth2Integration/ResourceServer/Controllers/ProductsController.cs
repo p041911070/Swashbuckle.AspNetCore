@@ -5,11 +5,12 @@ using Microsoft.AspNetCore.Authorization;
 namespace OAuth2Integration.ResourceServer.Controllers
 {
     [Route("products")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public class ProductsController : Controller
     {
         [HttpGet]
-        [Authorize(AuthenticationSchemes = "Bearer", Policy = "readAccess")]
-        public IEnumerable<Product> GetAll()
+        [Authorize("readAccess")]
+        public IEnumerable<Product> GetProducts()
         {
             yield return new Product
             {
@@ -19,8 +20,8 @@ namespace OAuth2Integration.ResourceServer.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize(AuthenticationSchemes = "Bearer", Policy = "readAccess")]
-        public Product GetById(int id)
+        [Authorize("readAccess")]
+        public Product GetProduct(int id)
         {
             return new Product
             {
@@ -32,13 +33,13 @@ namespace OAuth2Integration.ResourceServer.Controllers
 
         [HttpPost]
         [Authorize("writeAccess")]
-        public void Post([FromBody]Product product)
+        public void CreateProduct([FromBody]Product product)
         {
         }
 
         [HttpDelete("{id}")]
         [Authorize("writeAccess")]
-        public void Delete(int id)
+        public void DeleteProduct(int id)
         {
         }
     }

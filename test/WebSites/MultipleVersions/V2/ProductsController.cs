@@ -4,24 +4,24 @@ using MultipleVersions.V1;
 
 namespace MultipleVersions.V2
 {
-    [ApiVersion("2")]
-    [Route("v{version:apiVersion}/products")]
-    [Produces("application/json")]
+    [ApiVersion("2.0")]
+    [ApiController]
+    [Route("[controller]")]
     public class ProductsController
     {
         [HttpPost]
-        public int Create([FromBody, Required]Product product)
+        public int CreateProduct([FromBody, Required]Product product)
         {
             return 1;
         }
 
         [HttpPut("{id}")]
-        public void Update(int id, [FromBody, Required]Product product)
+        public void UpdateProduct(int id, [FromBody, Required]Product product)
         {
         }
 
         [HttpDelete("{id}")]
-        public void Delete(int id)
+        public void DeleteProduct(int id)
         {
         }
     }

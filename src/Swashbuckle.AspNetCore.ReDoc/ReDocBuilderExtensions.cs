@@ -1,28 +1,19 @@
 ﻿using System;
-using System.Reflection;
-using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.ReDoc;
 
 namespace Microsoft.AspNetCore.Builder
 {
     public static class ReDocBuilderExtensions
     {
-        private const string EmbeddedFilesNamespace = "Swashbuckle.AspNetCore.ReDoc.redoc.dist";
-
         public static IApplicationBuilder UseReDoc(
             this IApplicationBuilder app,
-            Action<ReDocOptions> setupAction)
+            Action<ReDocOptions> setupAction = null)
         {
-            var options = new ReDocOptions();
+            var options = app.ApplicationServices.GetService<IOptions<ReDocOptions>>()?.Value ?? new ReDocOptions();
             setupAction?.Invoke(options);
-
-            app.UseMiddleware<ReDocIndexMiddleware>(options);
-            app.UseFileServer(new FileServerOptions
-            {
-                RequestPath = string.IsNullOrEmpty(options.RoutePrefix) ? string.Empty : $"/{options.RoutePrefix}",
-                FileProvider = new EmbeddedFileProvider(typeof(ReDocBuilderExtensions).GetTypeInfo().Assembly, EmbeddedFilesNamespace),
-                EnableDirectoryBrowsing = true // will redirect to /{options.RoutePrefix}/ when trailing slash is missing
-            });
+            app.UseMiddleware<ReDocMiddleware>(options);
 
             return app;
         }

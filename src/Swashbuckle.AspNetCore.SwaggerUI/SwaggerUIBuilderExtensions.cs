@@ -1,29 +1,19 @@
 ﻿using System;
-using System.Reflection;
-using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
 namespace Microsoft.AspNetCore.Builder
 {
     public static class SwaggerUIBuilderExtensions
     {
-        private const string EmbeddedFilesNamespace = "Swashbuckle.AspNetCore.SwaggerUI.node_modules.swagger_ui_dist";
-
         public static IApplicationBuilder UseSwaggerUI(
             this IApplicationBuilder app,
             Action<SwaggerUIOptions> setupAction = null)
         {
-            var options = new SwaggerUIOptions();
+            var options = app.ApplicationServices.GetService<IOptions<SwaggerUIOptions>>()?.Value ?? new SwaggerUIOptions();
             setupAction?.Invoke(options);
-
-            var assembly = typeof(SwaggerUIBuilderExtensions).GetTypeInfo().Assembly;
-
-            app.UseMiddleware<SwaggerUIIndexMiddleware>(options);
-            app.UseFileServer(new FileServerOptions
-            {
-                RequestPath = string.IsNullOrEmpty(options.RoutePrefix) ? string.Empty : $"/{options.RoutePrefix}",
-                FileProvider = new EmbeddedFileProvider(typeof(SwaggerUIBuilderExtensions).GetTypeInfo().Assembly, EmbeddedFilesNamespace),
-            });
+            app.UseMiddleware<SwaggerUIMiddleware>(options);
 
             return app;
         }

@@ -1,91 +1,98 @@
-﻿using System.IO;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Serialization;
-using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
 using Basic.Swagger;
+using Microsoft.AspNetCore.Localization;
 
 namespace Basic
 {
     public class Startup
     {
-        private readonly IHostingEnvironment _hostingEnv;
-
-        public Startup(IHostingEnvironment hostingEnv)
+        public Startup(IConfiguration configuration)
         {
-            _hostingEnv = hostingEnv;
+            Configuration = configuration;
         }
 
-        // This method gets called by a runtime.
-        // Use this method to add services to the container
+        public IConfiguration Configuration { get; }
+
+        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services
-                .AddMvc()
-                .AddJsonOptions(options =>
-                {
-                    options.SerializerSettings.ContractResolver = new DefaultContractResolver();
-                });
-
-            // Uncomment the following line to add Web API services which makes it easier to port Web API 2 controllers.
-            // You will also need to add the Microsoft.AspNetCore.Mvc.WebApiCompatShim package to the 'dependencies' section of project.json.
-            // services.AddWebApiConventions();
+            services.AddControllers();
 
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1",
-                    new Info
+                    new OpenApiInfo
                     {
+                        Title = "Test API V1",
                         Version = "v1",
-                        Title = "Swashbuckle Sample API",
                         Description = "A sample API for testing Swashbuckle",
-                        TermsOfService = "Some terms ..."
+                        TermsOfService = new Uri("http://tempuri.org/terms")
                     }
                 );
 
                 c.OperationFilter<AssignOperationVendorExtensions>();
-                c.OperationFilter<FormDataOperationFilter>();
-
-                c.DescribeAllEnumsAsStrings();
 
                 c.SchemaFilter<ExamplesSchemaFilter>();
 
-                //c.DescribeAllParametersInCamelCase();
-            });
+                c.DescribeAllParametersInCamelCase();
 
-            if (_hostingEnv.IsDevelopment())
-            {
-                services.ConfigureSwaggerGen(c =>
-                {
-                    var xmlCommentsPath = Path.Combine(System.AppContext.BaseDirectory, "Basic.xml");
-                    c.IncludeXmlComments(xmlCommentsPath);
-                });
-            }
+                //c.GeneratePolymorphicSchemas();
+
+                c.EnableAnnotations();
+            });
         }
 
-        // Configure is called after ConfigureServices is called.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            loggerFactory.AddConsole();
-            loggerFactory.AddDebug();
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
 
-            // Add MVC to the request pipeline.
-            app.UseDeveloperExceptionPage();
-            app.UseMvc();
-            // Add the following route for porting Web API 2 controllers.
-            // routes.MapWebApiRoute("DefaultApi", "api/{controller}/{id?}");
+            app.UseRouting();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
+            var supportedCultures = new[]
+            {
+                new CultureInfo("en-US"),
+                new CultureInfo("fr"),
+                new CultureInfo("sv-SE"),
+            };
+
+            app.UseRequestLocalization(new RequestLocalizationOptions
+            {
+                DefaultRequestCulture = new RequestCulture("en-US"),
+                // Formatting numbers, dates, etc.
+                SupportedCultures = supportedCultures,
+                // UI strings that we have localized.
+                SupportedUICultures = supportedCultures
+            });
 
             app.UseSwagger(c =>
             {
-                c.PreSerializeFilters.Add((swagger, httpReq) => swagger.Host = httpReq.Host.Value);
+                c.PreSerializeFilters.Add((swagger, httpReq) =>
+                {
+                    swagger.Servers = new List<OpenApiServer> { new OpenApiServer { Url = $"{httpReq.Scheme}://{httpReq.Host.Value}" } };
+                });
             });
 
             app.UseSwaggerUI(c =>
             {
                 c.RoutePrefix = ""; // serve the UI at root
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "V1 Docs");
+                c.SwaggerEndpoint("swagger/v1/swagger.json", "V1 Docs");
+                c.DisplayOperationId();
             });
         }
     }

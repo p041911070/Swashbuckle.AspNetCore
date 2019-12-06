@@ -1,21 +1,24 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <Import Project="..\..\version.props" />
 
   <PropertyGroup>
     <Description>Swashbuckle (Swagger) Command Line Tools</Description>
-    <TargetFrameworks>netcoreapp2.0</TargetFrameworks>
-    <VersionPrefix>2.4.0-beta1</VersionPrefix>
+    <TargetFrameworks>netstandard2.0;netcoreapp3.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <AssemblyName>dotnet-swagger</AssemblyName>
     <PackageId>Swashbuckle.AspNetCore.Cli</PackageId>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>swagger</ToolCommandName>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Swashbuckle.AspNetCore.Swagger\Swashbuckle.AspNetCore.Swagger.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore" Version="2.0.0" />
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="Microsoft.AspNetCore" Version="2.1.0" />
+    <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
   </ItemGroup>
+
 </Project>

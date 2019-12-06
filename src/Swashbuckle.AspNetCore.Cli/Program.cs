@@ -5,14 +5,13 @@ using System.IO;
 using System.Runtime.Loader;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi.Writers;
 using Swashbuckle.AspNetCore.Swagger;
 
 namespace Swashbuckle.AspNetCore.Cli
 {
-    class Program
+    public class Program
     {
         static int Main(string[] args)
         {
@@ -31,7 +30,9 @@ namespace Swashbuckle.AspNetCore.Cli
                 c.Argument("swaggerdoc", "name of the swagger doc you want to retrieve, as configured in your startup class");
                 c.Option("--output", "relative path where the Swagger will be output, defaults to stdout");
                 c.Option("--host", "a specific host to include in the Swagger output");
-                c.Option("--basepath", "a specific basePath to inlcude in the Swagger output");
+                c.Option("--basepath", "a specific basePath to include in the Swagger output");
+                c.Option("--serializeasv2", "output Swagger in the V2 format rather than V3", true);
+                c.Option("--yaml", "exports swagger in a yaml format", true);
                 c.OnRun((namedArgs) =>
                 {
                     var depsFile = namedArgs["startupassembly"].Replace(".dll", ".deps.json");
@@ -39,9 +40,9 @@ namespace Swashbuckle.AspNetCore.Cli
 
                     var subProcess = Process.Start("dotnet", string.Format(
                         "exec --depsfile {0} --runtimeconfig {1} {2} _{3}", // note the underscore
-                        depsFile,
-                        runtimeConfig,
-                        typeof(Program).GetTypeInfo().Assembly.Location,
+                        EscapePath(depsFile),
+                        EscapePath(runtimeConfig),
+                        EscapePath(typeof(Program).GetTypeInfo().Assembly.Location),
                         string.Join(" ", args)
                     ));
 
@@ -58,6 +59,8 @@ namespace Swashbuckle.AspNetCore.Cli
                 c.Option("--output", "");
                 c.Option("--host", "");
                 c.Option("--basepath", "");
+                c.Option("--serializeasv2", "", true);
+                c.Option("--yaml", "", true);
                 c.OnRun((namedArgs) =>
                 {
                     // 1) Configure host with provided startupassembly
@@ -72,8 +75,7 @@ namespace Swashbuckle.AspNetCore.Cli
                     var swagger = swaggerProvider.GetSwagger(
                         namedArgs["swaggerdoc"],
                         namedArgs.ContainsKey("--host") ? namedArgs["--host"] : null,
-                        namedArgs.ContainsKey("--basepath") ? namedArgs["--basepath"] : null,
-                        null);
+                        namedArgs.ContainsKey("--basepath") ? namedArgs["--basepath"] : null);
 
                     // 3) Serialize to specified output location or stdout
                     var outputPath = namedArgs.ContainsKey("--output")
@@ -82,11 +84,19 @@ namespace Swashbuckle.AspNetCore.Cli
 
                     using (var streamWriter = (outputPath != null ? File.CreateText(outputPath) : Console.Out))
                     {
-                        var mvcOptionsAccessor = (IOptions<MvcJsonOptions>)host.Services.GetService(typeof(IOptions<MvcJsonOptions>));
-                        var serializer = SwaggerSerializerFactory.Create(mvcOptionsAccessor);
+                        IOpenApiWriter writer;
+                        if (namedArgs.ContainsKey("--yaml"))
+                            writer = new OpenApiYamlWriter(streamWriter);
+                        else
+                            writer = new OpenApiJsonWriter(streamWriter);
 
-                        serializer.Serialize(streamWriter, swagger);
-                        Console.WriteLine($"Swagger JSON succesfully written to {outputPath}");
+                        if (namedArgs.ContainsKey("--serializeasv2"))
+                            swagger.SerializeAsV2(writer);
+                        else
+                            swagger.SerializeAsV3(writer);
+
+                        if (outputPath != null)
+                            Console.WriteLine($"Swagger JSON/YAML succesfully written to {outputPath}");
                     }
 
                     return 0;
@@ -94,6 +104,16 @@ namespace Swashbuckle.AspNetCore.Cli
             });
 
             return runner.Run(args);
+        }
+
+        private static string EscapePath(string path)
+        {
+            if (path.Contains(" "))
+            {
+                return "\"" + path + "\"";
+            }
+
+            return path;
         }
     }
 }
